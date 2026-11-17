@@ -40,3 +40,19 @@ export interface RealtimeTelemetry {
   sensorCount: number;
   ndviAverage: number;
 }
+
+export interface CityStat {
+  id: string;
+  name: string;
+  forestryIncome: number; // 育林活动增收金额 (万元)
+  socialIncome: number; // 社会增收金额 (万元)
+  forestryArea: number; // 闲散林地育林面积 (亩)
+  socialArea: number; // 社会增收面积 (万元/亩)
+  growthRate: string; // 环比增长率
+  color: string; // 地图分层设色
+  mapPath: string; // SVG 轮廓路径
+  labelX: number;
+  labelY: number;
+}
+
+export type RevenueMapMetric = 'socialIncome' | 'forestryIncome' | 'forestryArea';

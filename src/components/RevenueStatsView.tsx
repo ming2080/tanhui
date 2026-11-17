@@ -1,4 +1,13 @@
 import React, { useState } from 'react';
+import {
+  CITY_STATS,
+  MAP_METRIC_OPTIONS,
+  colorForMetricValue,
+  legendBuckets,
+  metricValue,
+  summarizeRevenueStats,
+} from '../data/revenueStats';
+import type { CityStat, RevenueMapMetric } from '../types';
 import { ChevronDown, TrendingUp, RotateCcw, LineChart, BarChart3, AlignLeft } from 'lucide-react';
 
 // 计算三阶贝塞尔曲线平滑路径
@@ -32,241 +41,22 @@ function createSmoothAreaPath(points: { x: number; y: number }[], baseY: number)
 }
 
 
-interface CityStat {
-  id: string;
-  name: string;
-  forestryIncome: number; // 育林活动增收金额 (万元)
-  socialIncome: number;   // 社会增收金额 (万元)
-  forestryArea: number;   // 闲散林地育林面积 (亩)
-  socialArea: number;     // 社会增收面积 (万元/亩)
-  growthRate: string;     // 环比增长率
-  color: string;          // 地图分层设色
-  mapPath: string;        // SVG 轮廓路径
-  labelX: number;
-  labelY: number;
-}
 
-// 对应截图 image_54c4ebe8.png 中的安徽省各行政区划林业增收真实数据 (近期 2026 年)
-const CITY_STATS: CityStat[] = [
-  {
-    id: 'hefei',
-    name: '合肥市',
-    forestryIncome: 158,
-    socialIncome: 126,
-    forestryArea: 12500,
-    socialArea: 610,
-    growthRate: '+32.4%',
-    color: '#2fa883',
-    mapPath: 'M 225 245 L 265 235 L 295 245 L 320 270 L 315 305 L 285 330 L 255 335 L 230 310 L 220 275 Z',
-    labelX: 265,
-    labelY: 280,
-  },
-  {
-    id: 'wuhu',
-    name: '芜湖市',
-    forestryIncome: 194,
-    socialIncome: 105,
-    forestryArea: 14200,
-    socialArea: 520,
-    growthRate: '+28.9%',
-    color: '#3ec89e',
-    mapPath: 'M 315 335 L 350 330 L 375 355 L 365 395 L 335 410 L 310 380 L 320 350 Z',
-    labelX: 345,
-    labelY: 365,
-  },
-  {
-    id: 'bengbu',
-    name: '蚌埠市',
-    forestryIncome: 180,
-    socialIncome: 70,
-    forestryArea: 11800,
-    socialArea: 360,
-    growthRate: '+24.5%',
-    color: '#5cdbb4',
-    mapPath: 'M 255 160 L 310 150 L 335 175 L 325 210 L 280 215 L 245 195 Z',
-    labelX: 290,
-    labelY: 185,
-  },
-  {
-    id: 'huainan',
-    name: '淮南市',
-    forestryIncome: 52,
-    socialIncome: 78,
-    forestryArea: 4200,
-    socialArea: 280,
-    growthRate: '+18.2%',
-    color: '#7eebd0',
-    mapPath: 'M 215 195 L 255 190 L 275 220 L 255 245 L 210 240 L 205 215 Z',
-    labelX: 235,
-    labelY: 220,
-  },
-  {
-    id: 'maanshan',
-    name: '马鞍山市',
-    forestryIncome: 34,
-    socialIncome: 62,
-    forestryArea: 2800,
-    socialArea: 210,
-    growthRate: '+15.7%',
-    color: '#7eebd0',
-    mapPath: 'M 335 285 L 375 275 L 400 305 L 385 340 L 345 335 L 330 305 Z',
-    labelX: 365,
-    labelY: 305,
-  },
-  {
-    id: 'huaibei',
-    name: '淮北市',
-    forestryIncome: 116,
-    socialIncome: 96,
-    forestryArea: 8900,
-    socialArea: 430,
-    growthRate: '+31.1%',
-    color: '#3ec89e',
-    mapPath: 'M 265 65 L 305 60 L 325 90 L 305 125 L 270 120 L 255 90 Z',
-    labelX: 288,
-    labelY: 90,
-  },
-  {
-    id: 'tongling',
-    name: '铜陵市',
-    forestryIncome: 82,
-    socialIncome: 70,
-    forestryArea: 6100,
-    socialArea: 290,
-    growthRate: '+21.3%',
-    color: '#5cdbb4',
-    mapPath: 'M 285 345 L 315 345 L 325 380 L 295 395 L 275 375 Z',
-    labelX: 300,
-    labelY: 365,
-  },
-  {
-    id: 'anqing',
-    name: '安庆市',
-    forestryIncome: 105,
-    socialIncome: 126,
-    forestryArea: 9400,
-    socialArea: 590,
-    growthRate: '+35.8%',
-    color: '#1b6b55',
-    mapPath: 'M 175 350 L 225 340 L 265 355 L 275 405 L 255 450 L 195 460 L 155 415 L 150 375 Z',
-    labelX: 215,
-    labelY: 400,
-  },
-  {
-    id: 'huangshan',
-    name: '黄山市',
-    forestryIncome: 180,
-    socialIncome: 88,
-    forestryArea: 15200,
-    socialArea: 460,
-    growthRate: '+33.6%',
-    color: '#d2fbf0',
-    mapPath: 'M 285 455 L 340 445 L 385 470 L 375 530 L 330 560 L 285 535 L 270 485 Z',
-    labelX: 325,
-    labelY: 505,
-  },
-  {
-    id: 'chuzhou',
-    name: '滁州市',
-    forestryIncome: 95,
-    socialIncome: 82,
-    forestryArea: 7600,
-    socialArea: 380,
-    growthRate: '+26.2%',
-    color: '#a8f4e2',
-    mapPath: 'M 305 210 L 365 200 L 415 230 L 410 280 L 350 285 L 315 250 Z',
-    labelX: 365,
-    labelY: 245,
-  },
-  {
-    id: 'luan',
-    name: '六安市',
-    forestryIncome: 120,
-    socialIncome: 92,
-    forestryArea: 11000,
-    socialArea: 480,
-    growthRate: '+29.4%',
-    color: '#d2fbf0',
-    mapPath: 'M 135 240 L 210 235 L 225 295 L 210 345 L 165 350 L 125 310 L 120 265 Z',
-    labelX: 168,
-    labelY: 290,
-  },
-  {
-    id: 'bozhou',
-    name: '亳州市',
-    forestryIncome: 88,
-    socialIncome: 75,
-    forestryArea: 6800,
-    socialArea: 310,
-    growthRate: '+22.1%',
-    color: '#3ec89e',
-    mapPath: 'M 185 85 L 245 75 L 260 115 L 235 155 L 180 145 L 165 110 Z',
-    labelX: 215,
-    labelY: 115,
-  },
-  {
-    id: 'suzhou',
-    name: '宿州市',
-    forestryIncome: 102,
-    socialIncome: 84,
-    forestryArea: 8100,
-    socialArea: 370,
-    growthRate: '+25.0%',
-    color: '#7eebd0',
-    mapPath: 'M 295 70 L 365 65 L 385 110 L 360 160 L 310 150 L 300 110 Z',
-    labelX: 340,
-    labelY: 110,
-  },
-  {
-    id: 'fuyang',
-    name: '阜阳市',
-    forestryIncome: 76,
-    socialIncome: 68,
-    forestryArea: 5900,
-    socialArea: 290,
-    growthRate: '+20.5%',
-    color: '#d2fbf0',
-    mapPath: 'M 145 155 L 215 150 L 225 195 L 195 235 L 140 225 L 125 185 Z',
-    labelX: 175,
-    labelY: 190,
-  },
-  {
-    id: 'chizhou',
-    name: '池州市',
-    forestryIncome: 110,
-    socialIncome: 95,
-    forestryArea: 8600,
-    socialArea: 420,
-    growthRate: '+31.8%',
-    color: '#268568',
-    mapPath: 'M 245 405 L 285 395 L 315 425 L 295 470 L 255 460 L 240 430 Z',
-    labelX: 275,
-    labelY: 430,
-  },
-  {
-    id: 'xuancheng',
-    name: '宣城市',
-    forestryIncome: 135,
-    socialIncome: 86,
-    forestryArea: 10500,
-    socialArea: 440,
-    growthRate: '+27.6%',
-    color: '#a8f4e2',
-    mapPath: 'M 345 385 L 395 365 L 435 400 L 415 465 L 365 470 L 335 425 Z',
-    labelX: 385,
-    labelY: 415,
-  },
-];
 
 export const RevenueStatsView: React.FC = () => {
   const [districtFilter, setDistrictFilter] = useState<string>('');
   const [yearFilter, setYearFilter] = useState<string>('2026');
   const [barMetric, setBarMetric] = useState<string>('按增收金额 (万元)');
-  const [mapMetric, setMapMetric] = useState<string>('按社会增收金额 (万元)');
+  const [mapMetric, setMapMetric] = useState<RevenueMapMetric>('socialIncome');
   const [hoveredCity, setHoveredCity] = useState<CityStat | null>(null);
   const [chartStyle, setChartStyle] = useState<'area' | 'horizontal' | 'bar'>('area');
 
   const chartCities = CITY_STATS.slice(0, 9);
+
+  // KPI、环比圆环、地图设色与图例均由各市数据计算得出
+  const summary = summarizeRevenueStats(CITY_STATS);
+  const metricMax = Math.max(...CITY_STATS.map((c) => metricValue(c, mapMetric)));
+  const mapLegend = legendBuckets(metricMax);
 
   return (
     <div className="space-y-4 animate-in fade-in">
@@ -284,15 +74,11 @@ export const RevenueStatsView: React.FC = () => {
                   className="w-full px-3 py-1.5 bg-[#101a36] border border-[#1d2d57] text-slate-100 rounded focus:outline-none focus:border-[#00c88c] cursor-pointer"
                 >
                   <option value="">请选择</option>
-                  <option value="合肥市">合肥市</option>
-                  <option value="芜湖市">芜湖市</option>
-                  <option value="蚌埠市">蚌埠市</option>
-                  <option value="淮南市">淮南市</option>
-                  <option value="马鞍山市">马鞍山市</option>
-                  <option value="淮北市">淮北市</option>
-                  <option value="铜陵市">铜陵市</option>
-                  <option value="安庆市">安庆市</option>
-                  <option value="黄山市">黄山市</option>
+                  {CITY_STATS.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -340,7 +126,7 @@ export const RevenueStatsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline">
-                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">58312</span>
+                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">{summary.totalForestryArea.toLocaleString()}</span>
                   <span className="text-xs text-slate-300 ml-1.5">亩</span>
                 </div>
               </div>
@@ -357,7 +143,7 @@ export const RevenueStatsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline">
-                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">2823</span>
+                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">{summary.totalSocialArea.toLocaleString()}</span>
                   <span className="text-xs text-slate-300 ml-1.5">万元</span>
                 </div>
               </div>
@@ -374,7 +160,7 @@ export const RevenueStatsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline">
-                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">231312</span>
+                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">{summary.totalForestryIncome.toLocaleString()}</span>
                   <span className="text-xs text-slate-300 ml-1.5">万元</span>
                 </div>
               </div>
@@ -391,7 +177,7 @@ export const RevenueStatsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline">
-                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">5512</span>
+                  <span className="text-2xl font-bold font-mono text-[#00c88c] tracking-tight">{summary.totalSocialIncome.toLocaleString()}</span>
                   <span className="text-xs text-slate-300 ml-1.5">万元</span>
                 </div>
               </div>
@@ -421,13 +207,13 @@ export const RevenueStatsView: React.FC = () => {
                     stroke="#00c88c"
                     strokeWidth="10"
                     strokeDasharray="251.2"
-                    strokeDashoffset={251.2 * (1 - 0.72)}
+                    strokeDashoffset={251.2 * (1 - summary.avgGrowthRate / 100)}
                     strokeLinecap="round"
                   />
                 </svg>
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-sm font-bold font-mono text-[#38bdf8] tracking-tight">30.66%</span>
+                  <span className="text-sm font-bold font-mono text-[#38bdf8] tracking-tight">{summary.avgGrowthRate.toFixed(2)}%</span>
                   <TrendingUp className="w-3.5 h-3.5 text-[#38bdf8] mt-0.5" />
                 </div>
               </div>
@@ -891,30 +677,25 @@ export const RevenueStatsView: React.FC = () => {
             <div className="relative">
               <select
                 value={mapMetric}
-                onChange={(e) => setMapMetric(e.target.value)}
+                onChange={(e) => setMapMetric(e.target.value as RevenueMapMetric)}
                 className="px-2.5 py-1 text-xs bg-[#101a36] border border-[#1d2d57] text-slate-200 rounded focus:outline-none focus:border-[#00c88c] cursor-pointer"
               >
-                <option value="按社会增收金额 (万元)">按社会增收金额 (万元)</option>
-                <option value="按育林增收金额 (万元)">按育林增收金额 (万元)</option>
-                <option value="按闲荒地面积 (亩)">按闲荒地面积 (亩)</option>
+                {MAP_METRIC_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           {/* 右上角分层设色图例 */}
           <div className="absolute top-14 right-4 z-10 bg-[#0a142e]/90 backdrop-blur-xs border border-[#18284c] rounded-md p-2 text-[10px] space-y-1 shadow-md">
-            <div className="text-slate-400 font-medium mb-1">增收金额</div>
+            <div className="text-slate-400 font-medium mb-1">
+              {MAP_METRIC_OPTIONS.find((opt) => opt.value === mapMetric)?.legendTitle}
+            </div>
             <div className="space-y-0.5">
-              {[
-                { color: '#1b6b55', label: '200' },
-                { color: '#268568', label: '171~200' },
-                { color: '#2fa883', label: '143~171' },
-                { color: '#3ec89e', label: '114~143' },
-                { color: '#5cdbb4', label: '86~114' },
-                { color: '#7eebd0', label: '57~86' },
-                { color: '#a8f4e2', label: '29~57' },
-                { color: '#d2fbf0', label: '0~29' },
-              ].map((item) => (
+              {mapLegend.map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5 font-mono text-[9px] text-slate-300">
                   <span className="w-3.5 h-2 rounded-2xs inline-block" style={{ backgroundColor: item.color }} />
                   <span>{item.label}</span>
@@ -943,7 +724,7 @@ export const RevenueStatsView: React.FC = () => {
                   >
                     <path
                       d={c.mapPath}
-                      fill={c.color}
+                      fill={colorForMetricValue(metricValue(c, mapMetric), metricMax)}
                       stroke={isSelected ? '#ffffff' : isHovered ? '#00e699' : '#091126'}
                       strokeWidth={isSelected ? '2.5' : isHovered ? '2' : '1'}
                       className="transition-colors hover:brightness-110"
