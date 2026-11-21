@@ -67,6 +67,7 @@ export const INITIAL_TELEMETRY: RealtimeTelemetry = {
   annualReductionTons: 3824500, // 382.45 万吨 CO2e
   todayIncrementalCO2: 12480, // 今日吸收固碳量 吨
   sensorCount: 1684,
+  totalSensorCount: 1688, // 通量塔总数
   ndviAverage: 0.842,
 };
 

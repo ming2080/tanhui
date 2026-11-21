@@ -42,6 +42,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onLogout }) 
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // KPI 由项目与遥测数据计算，避免写死数字
+  const totalManagedArea = projects.reduce((sum, p) => sum + p.areaHectares, 0);
+  const totalBiomass = INITIAL_TELEMETRY.totalForestBiomass;
+  const totalCcer = INITIAL_TELEMETRY.annualReductionTons;
+  const fluxTowerOnlineRate =
+    (INITIAL_TELEMETRY.sensorCount / INITIAL_TELEMETRY.totalSensorCount) * 100;
+
   // Filter projects
   const filteredProjects = projects.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
@@ -204,7 +211,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onLogout }) 
               <TreePine className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold font-mono text-white tabular-nums">
-              1,485.4 <span className="text-xs font-sans text-slate-400">万吨 CO₂e</span>
+              {totalBiomass.toLocaleString()} <span className="text-xs font-sans text-slate-400">万吨 CO₂e</span>
             </div>
             <div className="text-[11px] text-emerald-400 mt-2 flex items-center gap-1 font-mono">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -218,7 +225,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onLogout }) 
               <Layers className="w-4 h-4 text-teal-400" />
             </div>
             <div className="text-2xl font-bold font-mono text-white tabular-nums">
-              171,100 <span className="text-xs font-sans text-slate-400">公顷</span>
+              {totalManagedArea.toLocaleString()} <span className="text-xs font-sans text-slate-400">公顷</span>
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
               覆盖塞罕坝、胶州湾、若尔盖样地
@@ -231,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onLogout }) 
               <BarChart3 className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold font-mono text-emerald-300 tabular-nums">
-              3,824,500 <span className="text-xs font-sans text-slate-400">tCO₂e</span>
+              {totalCcer.toLocaleString()} <span className="text-xs font-sans text-slate-400">tCO₂e</span>
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
               第三方 MRV 权威机构全额签发
@@ -244,7 +251,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ user, onLogout }) 
               <Cpu className="w-4 h-4 text-teal-400" />
             </div>
             <div className="text-2xl font-bold font-mono text-white tabular-nums">
-              99.8% <span className="text-xs font-sans text-slate-400">(1,684/1,688)</span>
+              {fluxTowerOnlineRate.toFixed(1)}%{' '}
+              <span className="text-xs font-sans text-slate-400">
+                ({INITIAL_TELEMETRY.sensorCount.toLocaleString()}/
+                {INITIAL_TELEMETRY.totalSensorCount.toLocaleString()})
+              </span>
             </div>
             <div className="text-[11px] text-emerald-400 mt-2">
               实时数据流稳定 · 延迟 &lt; 2s

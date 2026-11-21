@@ -38,6 +38,7 @@ export interface RealtimeTelemetry {
   annualReductionTons: number;
   todayIncrementalCO2: number;
   sensorCount: number;
+  totalSensorCount: number; // 通量塔总数
   ndviAverage: number;
 }
 
