@@ -1,4 +1,17 @@
-import { CarbonProject, DemoAccount, RealtimeTelemetry, UserRoleInfo } from '../types';
+import { CarbonPriceRecord, CarbonProject, DemoAccount, RealtimeTelemetry, UserRoleInfo } from '../types';
+
+// 价格管理里无默认价且无生效中记录时，价值估算的兜底基准碳价（元/tCO2e）
+export const DEFAULT_CARBON_PRICE_FALLBACK = 52;
+
+/** 解析碳储量价值估算的基准碳价：默认价记录优先，其次取首条生效中记录，否则用兜底价 */
+export function resolveDefaultCarbonPrice(records: CarbonPriceRecord[]): { unitPrice: number; label: string } {
+  const record =
+    records.find((r) => r.isDefault) ?? records.find((r) => r.status === '生效中');
+  if (!record) {
+    return { unitPrice: DEFAULT_CARBON_PRICE_FALLBACK, label: '全国碳市场·市场价' };
+  }
+  return { unitPrice: record.unitPrice, label: `${record.marketSource}·${record.priceType}` };
+}
 
 export const USER_ROLES: UserRoleInfo[] = [
   {

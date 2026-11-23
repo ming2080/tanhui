@@ -57,3 +57,16 @@ export interface CityStat {
 }
 
 export type RevenueMapMetric = 'socialIncome' | 'forestryIncome' | 'forestryArea';
+
+export interface CarbonPriceRecord {
+  id: string;
+  priceNo: string;
+  priceType: '市场价' | '指导价' | '挂牌价' | '协议价';
+  marketSource: '全国碳市场' | '北京绿交所' | '广东碳汇市场' | 'CCER' | '海峡股权交易中心' | '四川碳交所' | '重庆碳交所';
+  unitPrice: number; // 元/tCO2e
+  priceDate: string;
+  dataSource: '交易所API' | '人工录入' | '国家监测网';
+  status: '生效中' | '已过期';
+  gatherTime: string;
+  isDefault?: boolean;
+}

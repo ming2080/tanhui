@@ -32,18 +32,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-export interface CarbonPriceRecord {
-  id: string;
-  priceNo: string;
-  priceType: '市场价' | '指导价' | '挂牌价' | '协议价';
-  marketSource: '全国碳市场' | '北京绿交所' | '广东碳汇市场' | 'CCER' | '海峡股权交易中心' | '四川碳交所' | '重庆碳交所';
-  unitPrice: number; // 元/tCO2e
-  priceDate: string;
-  dataSource: '交易所API' | '人工录入' | '国家监测网';
-  status: '生效中' | '已过期';
-  gatherTime: string;
-  isDefault?: boolean;
-}
+import { resolveDefaultCarbonPrice } from '../data/carbonData';
+import type { CarbonPriceRecord } from '../types';
 
 const INITIAL_PRICE_RECORDS: CarbonPriceRecord[] = [
   {
@@ -249,6 +239,9 @@ export const CarbonValueView: React.FC<CarbonValueViewProps> = ({
   // Master records
   const [records, setRecords] = useState<CarbonPriceRecord[]>(INITIAL_PRICE_RECORDS);
 
+  // 碳储量价值估算的基准碳价跟随价格管理里的默认价：设为默认的记录优先，其次取首条生效中记录
+  const defaultCarbonPrice = useMemo(() => resolveDefaultCarbonPrice(records), [records]);
+
   // Filter conditions
   const [filterPriceType, setFilterPriceType] = useState<string>('all');
   const [filterMarketSource, setFilterMarketSource] = useState<string>('all');
@@ -452,7 +445,7 @@ export const CarbonValueView: React.FC<CarbonValueViewProps> = ({
         priceNo: `100010${150 + Math.floor(Math.random() * 50)}`,
         priceType: '市场价',
         marketSource: '全国碳市场',
-        unitPrice: Math.floor(52 + Math.random() * 12),
+        unitPrice: Math.floor(defaultCarbonPrice.unitPrice + Math.random() * 12),
         priceDate: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
         dataSource: '交易所API',
         status: '生效中',
@@ -2535,7 +2528,7 @@ export const CarbonValueView: React.FC<CarbonValueViewProps> = ({
                     <span>碳资产公允价值估算</span>
                   </span>
                   <span className="text-[10px] font-mono text-emerald-400/80">
-                    基准碳价: 52.00 元/tCO₂e
+                    基准碳价: {defaultCarbonPrice.unitPrice.toFixed(2)} 元/tCO₂e（{defaultCarbonPrice.label}）
                   </span>
                 </div>
 
@@ -2543,14 +2536,14 @@ export const CarbonValueView: React.FC<CarbonValueViewProps> = ({
                   <div className="p-3 bg-slate-900/90 rounded border border-emerald-950">
                     <div className="text-[11px] text-slate-400 mb-0.5">潜在碳汇经济价值</div>
                     <div className="font-mono font-bold text-emerald-400 text-sm">
-                      ￥{(detailStorage.totalCarbon * 52).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}
+                      ￥{(detailStorage.totalCarbon * defaultCarbonPrice.unitPrice).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}
                     </div>
                   </div>
 
                   <div className="p-3 bg-slate-900/90 rounded border border-emerald-950">
                     <div className="text-[11px] text-slate-400 mb-0.5">碳资产质押授信额 (70%)</div>
                     <div className="font-mono font-bold text-teal-300 text-sm">
-                      ￥{(detailStorage.totalCarbon * 52 * 0.7).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}
+                      ￥{(detailStorage.totalCarbon * defaultCarbonPrice.unitPrice * 0.7).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}
                     </div>
                   </div>
                 </div>
