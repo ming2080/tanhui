@@ -2441,6 +2441,48 @@ export const CarbonFinanceView: React.FC<CarbonFinanceViewProps> = ({
       .sort((a, b) => new Date(b.applyDate).getTime() - new Date(a.applyDate).getTime());
   }, [loanApplications, appRegionFilter, appCompanyFilter, appProductFilter, appDateFilter, appRepayMethodFilter, appStatusFilter]);
 
+  // 贷款统计 KPI：由申贷记录与贷款产品数据计算，新增/审核/放款后自动更新
+  const loanStats = useMemo(() => {
+    const approvedStatuses: LoanServiceApplication['status'][] = ['审批通过', '待放款', '已放款', '已结清'];
+    const reviewingStatuses: LoanServiceApplication['status'][] = ['待审核', '审核中'];
+    const approvedApps = loanApplications.filter((app) => approvedStatuses.includes(app.status));
+    const reviewingApps = loanApplications.filter((app) => reviewingStatuses.includes(app.status));
+    const totalApplyAmount = loanApplications.reduce((sum, app) => sum + app.applyAmount, 0);
+    const approvedAmount = approvedApps.reduce((sum, app) => sum + app.applyAmount, 0);
+    const disbursedAmount = loanApplications.reduce((sum, app) => sum + app.disbursedAmount, 0);
+    const totalPledgeVolume = loanApplications.reduce((sum, app) => sum + (app.pledgeCarbonVolume ?? 0), 0);
+    const benefitedCompanies = new Set(
+      loanApplications.filter((app) => app.disbursedAmount > 0).map((app) => app.companyName),
+    ).size;
+    // 加权平均授信利率：按审批通过类申贷金额加权，利率取申贷记录自带值或对应贷款产品利率
+    const GREEN_SUBSIDY_RATE = 0.97; // 国家绿金贴息(百分点)
+    let weightedRateSum = 0;
+    let weightedRateBase = 0;
+    approvedApps.forEach((app) => {
+      const rate = app.interestRate ?? loanProducts.find((p) => p.productName === app.productName)?.interestRate;
+      if (rate !== undefined) {
+        weightedRateSum += app.applyAmount * rate;
+        weightedRateBase += app.applyAmount;
+      }
+    });
+    const weightedRate = weightedRateBase > 0 ? weightedRateSum / weightedRateBase : 0;
+    return {
+      totalCount: loanApplications.length,
+      approvedCount: approvedApps.length,
+      reviewingCount: reviewingApps.length,
+      totalApplyWan: totalApplyAmount / 10000,
+      approvedWan: approvedAmount / 10000,
+      disbursedWan: disbursedAmount / 10000,
+      pledgeWanTon: totalPledgeVolume / 10000,
+      approvalRate: loanApplications.length > 0 ? (approvedApps.length / loanApplications.length) * 100 : 0,
+      disburseRate: approvedAmount > 0 ? (disbursedAmount / approvedAmount) * 100 : 0,
+      benefitedCount: benefitedCompanies,
+      weightedRate,
+      rateAfterSubsidy: Math.max(0, weightedRate - GREEN_SUBSIDY_RATE),
+      subsidyRate: GREEN_SUBSIDY_RATE,
+    };
+  }, [loanApplications, loanProducts]);
+
   const totalAppPages = Math.max(1, Math.ceil(filteredLoanApplications.length / appPageSize));
   const displayedLoanApplications = useMemo(() => {
     const start = (appPage - 1) * appPageSize;
@@ -3884,11 +3926,11 @@ export const CarbonFinanceView: React.FC<CarbonFinanceViewProps> = ({
                         <span className="text-emerald-400 font-mono text-[10px] bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">+18.5%</span>
                       </div>
                       <div className="text-2xl font-extrabold font-mono text-white mt-2 flex items-baseline gap-1">
-                        158 <span className="text-xs font-normal text-slate-400">笔</span>
+                        {loanStats.totalCount} <span className="text-xs font-normal text-slate-400">笔</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-2 font-mono flex items-center justify-between pt-2 border-t border-[#18284c]/60">
-                        <span>通过: <strong className="text-emerald-400">98</strong> 笔</span>
-                        <span>审核中: <strong className="text-teal-300">32</strong> 笔</span>
+                        <span>通过: <strong className="text-emerald-400">{loanStats.approvedCount}</strong> 笔</span>
+                        <span>审核中: <strong className="text-teal-300">{loanStats.reviewingCount}</strong> 笔</span>
                       </div>
                     </div>
 
@@ -3899,20 +3941,20 @@ export const CarbonFinanceView: React.FC<CarbonFinanceViewProps> = ({
                         <span className="text-emerald-400 font-mono text-[10px] bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">+24.2%</span>
                       </div>
                       <div className="text-2xl font-extrabold font-mono text-[#00c88c] mt-2 flex items-baseline gap-1">
-                        28,500 <span className="text-xs font-normal text-slate-400">万元</span>
+                        {loanStats.totalApplyWan.toLocaleString('zh-CN')} <span className="text-xs font-normal text-slate-400">万元</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-2 font-mono pt-2 border-t border-[#18284c]/60">
-                        质押估算固碳量: <strong className="text-teal-300">142.5 万吨 CO₂e</strong>
+                        质押估算固碳量: <strong className="text-teal-300">{loanStats.pledgeWanTon.toFixed(1)} 万吨 CO₂e</strong>
                       </div>
                     </div>
 
                     <div className="p-4 bg-[#091126] border border-[#18284c] rounded-xl shadow-lg relative overflow-hidden group">
                       <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>审批通过金额</span>
-                        <span className="text-teal-300 font-mono text-[10px]">通过率 84.5%</span>
+                        <span className="text-teal-300 font-mono text-[10px]">通过率 {loanStats.approvalRate.toFixed(1)}%</span>
                       </div>
                       <div className="text-2xl font-extrabold font-mono text-white mt-2 flex items-baseline gap-1">
-                        21,200 <span className="text-xs font-normal text-slate-400">万元</span>
+                        {loanStats.approvedWan.toLocaleString('zh-CN')} <span className="text-xs font-normal text-slate-400">万元</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-2 font-mono pt-2 border-t border-[#18284c]/60">
                         平均审查时效: <strong className="text-slate-200">2.4 工作日</strong>
@@ -3922,26 +3964,26 @@ export const CarbonFinanceView: React.FC<CarbonFinanceViewProps> = ({
                     <div className="p-4 bg-[#091126] border border-[#18284c] rounded-xl shadow-lg relative overflow-hidden group">
                       <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>累计放款金额</span>
-                        <span className="text-emerald-400 font-mono text-[10px]">放款率 79.2%</span>
+                        <span className="text-emerald-400 font-mono text-[10px]">放款率 {loanStats.disburseRate.toFixed(1)}%</span>
                       </div>
                       <div className="text-2xl font-extrabold font-mono text-emerald-400 mt-2 flex items-baseline gap-1">
-                        16,800 <span className="text-xs font-normal text-slate-400">万元</span>
+                        {loanStats.disbursedWan.toLocaleString('zh-CN')} <span className="text-xs font-normal text-slate-400">万元</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-2 font-mono pt-2 border-t border-[#18284c]/60">
-                        已惠及企业/合作社: <strong className="text-emerald-300">42 家</strong>
+                        已惠及企业/合作社: <strong className="text-emerald-300">{loanStats.benefitedCount} 家</strong>
                       </div>
                     </div>
 
                     <div className="p-4 bg-[#091126] border border-[#18284c] rounded-xl shadow-lg relative overflow-hidden group">
                       <div className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>加权平均授信利率</span>
-                        <span className="text-teal-300 font-mono text-[10px]">贴息后 2.85%</span>
+                        <span className="text-teal-300 font-mono text-[10px]">贴息后 {loanStats.rateAfterSubsidy.toFixed(2)}%</span>
                       </div>
                       <div className="text-2xl font-extrabold font-mono text-teal-300 mt-2 flex items-baseline gap-1">
-                        3.82%
+                        {loanStats.weightedRate.toFixed(2)}%
                       </div>
                       <div className="text-[10px] text-slate-400 mt-2 font-mono pt-2 border-t border-[#18284c]/60">
-                        享受国家绿金贴息: <strong className="text-emerald-400">0.97%</strong>
+                        享受国家绿金贴息: <strong className="text-emerald-400">{loanStats.subsidyRate.toFixed(2)}%</strong>
                       </div>
                     </div>
                   </div>
