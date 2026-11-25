@@ -70,3 +70,19 @@ export interface CarbonPriceRecord {
   gatherTime: string;
   isDefault?: boolean;
 }
+
+/** 碳汇质量评估单个维度的得分与等级 */
+export interface QualityDimensionScore {
+  score: number; // 维度得分（0–100）
+  grade: string; // 维度等级（如 A+、A、A-、B+）
+}
+
+export type QualityDimensionKey =
+  | 'authenticity' // 真实性
+  | 'additionality' // 额外性
+  | 'permanence' // 永久性
+  | 'consistency' // 一致性
+  | 'completeness'; // 完整性
+
+/** 碳汇质量评估五个核心维度的得分 */
+export type QualityDimensions = Record<QualityDimensionKey, QualityDimensionScore>;

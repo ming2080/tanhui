@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { calcOverallQualityScore, resolveQualityGrade } from '../data/carbonData';
+import type { QualityDimensions } from '../types';
 import {
   FileText,
   CheckCircle2,
@@ -31,16 +33,8 @@ interface ProjectOption {
   projectType: string;
   treeSpecies: string;
   areaMu: number;
-  // Quality Assessment Metrics
-  overallScore: number;
-  grade: string;
-  dimensions: {
-    authenticity: { score: number; grade: string };
-    additionality: { score: number; grade: string };
-    permanence: { score: number; grade: string };
-    consistency: { score: number; grade: string };
-    completeness: { score: number; grade: string };
-  };
+  // Quality Assessment Metrics（综合得分与质量等级由五个维度得分计算得出，不再硬编码）
+  dimensions: QualityDimensions;
   // Value Assessment Metrics (Matching image_19410877.png, image_56b68066.png, image_6a27124b.png)
   valueMetrics: {
     totalCarbonStock: number; // 碳汇总量 (tCO₂e)
@@ -67,8 +61,6 @@ const PRESET_PROJECTS: ProjectOption[] = [
     projectType: 'CCER造林碳汇 (林业类温室气体自愿减排项目)',
     treeSpecies: '马尾松、杉木、麻栎、毛竹混交林 (林龄12~18年)',
     areaMu: 12500,
-    overallScore: 87,
-    grade: 'AAA (优秀)',
     dimensions: {
       authenticity: { score: 92, grade: 'A+' },
       additionality: { score: 85, grade: 'A-' },
@@ -126,8 +118,6 @@ const PRESET_PROJECTS: ProjectOption[] = [
     projectType: 'CCER森林抚育碳汇 (国家核证自愿减排量)',
     treeSpecies: '落叶松、油茶、黄山松、栓皮栎混交林',
     areaMu: 18200,
-    overallScore: 91,
-    grade: 'AAA (卓越)',
     dimensions: {
       authenticity: { score: 95, grade: 'A+' },
       additionality: { score: 89, grade: 'A' },
@@ -185,8 +175,6 @@ const PRESET_PROJECTS: ProjectOption[] = [
     projectType: 'VCS/CCER双认证森林经营碳汇项目',
     treeSpecies: '杉木人工林、湿地松、毛竹立体经营林',
     areaMu: 9600,
-    overallScore: 84,
-    grade: 'AA+ (优良)',
     dimensions: {
       authenticity: { score: 88, grade: 'A-' },
       additionality: { score: 82, grade: 'B+' },
@@ -244,8 +232,6 @@ const PRESET_PROJECTS: ProjectOption[] = [
     projectType: '湿地与防护林综合碳汇提升项目',
     treeSpecies: '池杉、水杉、枫杨、芦苇湿地复合植被',
     areaMu: 8500,
-    overallScore: 89,
-    grade: 'AAA (优秀)',
     dimensions: {
       authenticity: { score: 91, grade: 'A' },
       additionality: { score: 88, grade: 'A-' },
@@ -326,6 +312,10 @@ export const CarbonAssessmentView: React.FC<CarbonAssessmentViewProps> = ({
 
   // Currently loaded project
   const currentProject = PRESET_PROJECTS.find((p) => p.id === selectedProjectId) || PRESET_PROJECTS[0];
+
+  // 综合得分与质量等级由五个维度得分计算得出（与原硬编码展示值一致：87/91/84/89）
+  const overallScore = calcOverallQualityScore(currentProject.dimensions);
+  const qualityGrade = resolveQualityGrade(overallScore);
 
   // Active dimension filter for quality tab
   const [activeDimension, setActiveDimension] = useState<string>('all');
@@ -1138,13 +1128,13 @@ export const CarbonAssessmentView: React.FC<CarbonAssessmentViewProps> = ({
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-400">质量等级:</span>
                       <span className="text-emerald-400 font-bold tracking-wide">
-                        {currentProject.grade}
+                        {qualityGrade}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-400">综合得分:</span>
                       <span className="text-2xl font-bold font-mono text-[#38bdf8]">
-                        {currentProject.overallScore}
+                        {overallScore}
                       </span>
                       <span className="text-xs text-slate-400">分</span>
                     </div>

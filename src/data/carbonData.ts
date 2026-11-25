@@ -1,4 +1,4 @@
-import { CarbonPriceRecord, CarbonProject, DemoAccount, RealtimeTelemetry, UserRoleInfo } from '../types';
+import { CarbonPriceRecord, CarbonProject, DemoAccount, QualityDimensions, RealtimeTelemetry, UserRoleInfo } from '../types';
 
 // 价格管理里无默认价且无生效中记录时，价值估算的兜底基准碳价（元/tCO2e）
 export const DEFAULT_CARBON_PRICE_FALLBACK = 52;
@@ -11,6 +11,21 @@ export function resolveDefaultCarbonPrice(records: CarbonPriceRecord[]): { unitP
     return { unitPrice: DEFAULT_CARBON_PRICE_FALLBACK, label: '全国碳市场·市场价' };
   }
   return { unitPrice: record.unitPrice, label: `${record.marketSource}·${record.priceType}` };
+}
+
+/** 五个质量维度的等权均值即综合得分（四舍五入取整），与预置项目的原硬编码分一致 */
+export function calcOverallQualityScore(dimensions: QualityDimensions): number {
+  const scores = Object.values(dimensions).map((d) => d.score);
+  return Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+}
+
+/** 综合得分映射质量等级：90 分及以上卓越、85 分及以上优秀、80 分及以上优良 */
+export function resolveQualityGrade(overallScore: number): string {
+  if (overallScore >= 90) return 'AAA (卓越)';
+  if (overallScore >= 85) return 'AAA (优秀)';
+  if (overallScore >= 80) return 'AA+ (优良)';
+  if (overallScore >= 70) return 'AA (良好)';
+  return 'A (待提升)';
 }
 
 export const USER_ROLES: UserRoleInfo[] = [
