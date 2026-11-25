@@ -86,3 +86,87 @@ export type QualityDimensionKey =
 
 /** 碳汇质量评估五个核心维度的得分 */
 export type QualityDimensions = Record<QualityDimensionKey, QualityDimensionScore>;
+
+/** 碳汇交易系统：企业入驻记录 */
+export interface EnterpriseRecord {
+  id: string;
+  district: string;
+  enterpriseName: string;
+  address: string;
+  identity: '受让' | '出让' | '受让方' | '出让方' | string;
+  tradableVolume: number; // 吨
+  unitPrice: number; // 元/吨
+  contact: string;
+  onboardingTime: string;
+  licenseName?: string;
+  remark?: string;
+}
+
+/** 碳汇交易系统：供应挂牌记录 */
+export interface SupplyRecord {
+  id: string;
+  year: string;
+  district: string;
+  enterpriseName: string;
+  supplyVolume: number;
+  unitPrice: number;
+  tradedVolume: number;
+  onboardingTime: string;
+}
+
+/** 碳汇交易系统：需求意向记录 */
+export interface DemandRecord {
+  id: string;
+  year: string;
+  district: string;
+  enterpriseName: string;
+  demandVolume: number;
+  unitPrice: number;
+  tradedVolume: number;
+  onboardingTime: string;
+}
+
+/** 碳汇交易系统：交易记录 */
+export interface TradingRecord {
+  id: string;
+  year: string;
+  supplyDistrict: string;
+  supplyEnterpriseName: string;
+  demandDistrict: string;
+  demandEnterpriseName: string;
+  tradingVolume: number;
+  unitPrice: number;
+  tradingTime: string;
+}
+
+/** 交易记录页签统计摘要：笔数、累计交易量、累计交易额与加权平均单价均由交易记录计算 */
+export interface TradingSummary {
+  tradeCount: number;
+  totalVolume: number; // 吨
+  totalAmount: number; // 元
+  weightedAvgPrice: number; // 元/吨
+}
+
+/** 企业入驻页签统计摘要：入驻数按身份拆分，可交易总量为各企业可交易量之和 */
+export interface EnterpriseSummary {
+  enterpriseCount: number;
+  sellerCount: number;
+  buyerCount: number;
+  totalTradableVolume: number; // 吨
+}
+
+/** 供应挂牌页签统计摘要：成交率为已成交量占供应总量 */
+export interface SupplySummary {
+  supplyCount: number;
+  totalSupplyVolume: number; // 吨
+  totalTradedVolume: number; // 吨
+  tradeRate: number; // %
+}
+
+/** 需求意向页签统计摘要：成交率为已成交量占需求总量 */
+export interface DemandSummary {
+  demandCount: number;
+  totalDemandVolume: number; // 吨
+  totalTradedVolume: number; // 吨
+  tradeRate: number; // %
+}

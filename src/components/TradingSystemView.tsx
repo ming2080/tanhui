@@ -28,106 +28,35 @@ import {
   Upload,
   TrendingUp,
 } from 'lucide-react';
+import {
+  DemandRecord,
+  EnterpriseRecord,
+  SupplyRecord,
+  TradingRecord,
+} from '../types';
+import {
+  INITIAL_DEMANDS,
+  INITIAL_ENTERPRISES,
+  INITIAL_SUPPLIES,
+  INITIAL_TRADING_RECORDS,
+  calcDemandSummary,
+  calcEnterpriseSummary,
+  calcSupplySummary,
+  calcTradingSummary,
+} from '../data/tradingData';
 
-interface EnterpriseRecord {
-  id: string;
-  district: string;
-  enterpriseName: string;
-  address: string;
-  identity: '受让' | '出让' | '受让方' | '出让方' | string;
-  tradableVolume: number; // 吨
-  unitPrice: number; // 元/吨
-  contact: string;
-  onboardingTime: string;
-  licenseName?: string;
-  remark?: string;
+/** 统计摘要小卡片：标签 + 由记录数据实时计算的数值 */
+function SummaryStat({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <div className="p-3.5 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md">
+      <div className="text-[11px] text-slate-400 font-medium">{label}</div>
+      <div className="mt-1 text-xl font-mono font-bold text-emerald-400">
+        {value}
+        {unit && <span className="ml-1 text-xs text-slate-400 font-normal">{unit}</span>}
+      </div>
+    </div>
+  );
 }
-
-interface SupplyRecord {
-  id: string;
-  year: string;
-  district: string;
-  enterpriseName: string;
-  supplyVolume: number;
-  unitPrice: number;
-  tradedVolume: number;
-  onboardingTime: string;
-}
-
-interface DemandRecord {
-  id: string;
-  year: string;
-  district: string;
-  enterpriseName: string;
-  demandVolume: number;
-  unitPrice: number;
-  tradedVolume: number;
-  onboardingTime: string;
-}
-
-interface TradingRecord {
-  id: string;
-  year: string;
-  supplyDistrict: string;
-  supplyEnterpriseName: string;
-  demandDistrict: string;
-  demandEnterpriseName: string;
-  tradingVolume: number;
-  unitPrice: number;
-  tradingTime: string;
-}
-
-const INITIAL_ENTERPRISES: EnterpriseRecord[] = [
-  { id: 'ent-1', district: '合肥市 肥西县', enterpriseName: '安徽合肥绿碳生态科技有限责任公司', address: '合肥市肥西县上派镇派河大道168号', identity: '受让', tradableVolume: 1000, unitPrice: 52, contact: '157****3283 张伟', onboardingTime: '2026-10-15 14:32:10' },
-  { id: 'ent-2', district: '合肥市 肥西县', enterpriseName: '安徽省林业碳票运营管理有限公司', address: '合肥市肥西县经开区繁华大道288号', identity: '出让', tradableVolume: 8000, unitPrice: 50, contact: '138****2984 李娜', onboardingTime: '2026-10-14 11:20:05' },
-  { id: 'ent-3', district: '合肥市 庐阳区', enterpriseName: '合肥庐阳区林业生态发展投资有限公司', address: '合肥市庐阳区长江中路369号', identity: '受让', tradableVolume: 1500, unitPrice: 53, contact: '139****5678 王强', onboardingTime: '2026-10-13 09:15:40' },
-  { id: 'ent-4', district: '合肥市 庐阳区', enterpriseName: '安徽森碳汇源生物科技有限公司', address: '合肥市庐阳区杏花村街道天水路58号', identity: '受让', tradableVolume: 5000, unitPrice: 49, contact: '189****8765 赵敏', onboardingTime: '2026-10-12 16:45:20' },
-  { id: 'ent-5', district: '合肥市 肥东县', enterpriseName: '合肥肥东生态林业开发有限公司', address: '合肥市肥东县店埠镇撮镇路12号', identity: '受让', tradableVolume: 1200, unitPrice: 51, contact: '153****3488 孙涛', onboardingTime: '2026-10-11 10:22:15' },
-  { id: 'ent-6', district: '合肥市 肥东县', enterpriseName: '安徽皖中绿色碳汇资产管理中心', address: '合肥市肥东县龙泉路99号', identity: '出让', tradableVolume: 2500, unitPrice: 48, contact: '177****1122 周杰', onboardingTime: '2026-10-10 14:10:00' },
-  { id: 'ent-7', district: '合肥市 高新区', enterpriseName: '合肥高新低碳技术研究院有限公司', address: '合肥市高新区创新大道118号', identity: '出让', tradableVolume: 1000, unitPrice: 55, contact: '181****6778 吴芳', onboardingTime: '2026-10-09 09:30:45' },
-  { id: 'ent-8', district: '合肥市 高新区', enterpriseName: '安徽皖投碳中和数字科技有限责任公司', address: '合肥市高新区望江西路800号', identity: '出让', tradableVolume: 3500, unitPrice: 52, contact: '133****2233 郑国强', onboardingTime: '2026-10-08 15:50:30' },
-  { id: 'ent-9', district: '合肥市 蜀山区', enterpriseName: '合肥蜀山绿林碳汇开发有限公司', address: '合肥市蜀山区黄山路456号', identity: '受让', tradableVolume: 2000, unitPrice: 50, contact: '150****9988 陈志远', onboardingTime: '2026-10-07 10:05:12' },
-  { id: 'ent-10', district: '合肥市 滨湖新区', enterpriseName: '安徽滨湖生态湿地碳汇投资有限公司', address: '合肥市滨湖新区徽州大道5555号', identity: '出让', tradableVolume: 6000, unitPrice: 51, contact: '136****1122 刘洋', onboardingTime: '2026-10-06 08:50:00' },
-];
-
-const INITIAL_SUPPLIES: SupplyRecord[] = [
-  { id: 'sup-1', year: '2026', district: '合肥市 肥西县', enterpriseName: '安徽合肥绿碳生态科技有限责任公司', supplyVolume: 1000, unitPrice: 52, tradedVolume: 0, onboardingTime: '2026-10-15 14:32:10' },
-  { id: 'sup-2', year: '2026', district: '合肥市 肥西县', enterpriseName: '安徽省林业碳票运营管理有限公司', supplyVolume: 8000, unitPrice: 50, tradedVolume: 2000, onboardingTime: '2026-10-14 11:20:05' },
-  { id: 'sup-3', year: '2025', district: '合肥市 庐阳区', enterpriseName: '合肥庐阳区林业生态发展投资有限公司', supplyVolume: 1500, unitPrice: 53, tradedVolume: 500, onboardingTime: '2025-10-13 09:15:40' },
-  { id: 'sup-4', year: '2025', district: '合肥市 庐阳区', enterpriseName: '安徽森碳汇源生物科技有限公司', supplyVolume: 5000, unitPrice: 49, tradedVolume: 1000, onboardingTime: '2025-09-12 16:45:20' },
-  { id: 'sup-5', year: '2024', district: '合肥市 肥东县', enterpriseName: '合肥肥东生态林业开发有限公司', supplyVolume: 1200, unitPrice: 51, tradedVolume: 1200, onboardingTime: '2024-10-11 10:22:15' },
-  { id: 'sup-6', year: '2024', district: '合肥市 肥东县', enterpriseName: '安徽皖中绿色碳汇资产管理中心', supplyVolume: 2500, unitPrice: 48, tradedVolume: 2000, onboardingTime: '2024-08-10 14:10:00' },
-  { id: 'sup-7', year: '2023', district: '合肥市 高新区', enterpriseName: '合肥高新低碳技术研究院有限公司', supplyVolume: 1000, unitPrice: 55, tradedVolume: 1000, onboardingTime: '2023-11-09 09:30:45' },
-  { id: 'sup-8', year: '2023', district: '合肥市 高新区', enterpriseName: '安徽碳中和数字科技有限责任公司', supplyVolume: 3500, unitPrice: 52, tradedVolume: 1000, onboardingTime: '2023-10-08 15:50:30' },
-  { id: 'sup-9', year: '2023', district: '合肥市 蜀山区', enterpriseName: '合肥蜀山绿林碳汇开发有限公司', supplyVolume: 2000, unitPrice: 50, tradedVolume: 500, onboardingTime: '2023-07-07 10:05:12' },
-  { id: 'sup-10', year: '2023', district: '合肥市 滨湖新区', enterpriseName: '安徽滨湖生态湿地碳汇投资有限公司', supplyVolume: 6000, unitPrice: 51, tradedVolume: 3000, onboardingTime: '2023-05-06 08:50:00' },
-];
-
-const INITIAL_DEMANDS: DemandRecord[] = [
-  { id: 'dem-1', year: '2026', district: '合肥市 肥西县', enterpriseName: '安徽合肥绿碳生态科技有限责任公司', demandVolume: 1000, unitPrice: 52, tradedVolume: 0, onboardingTime: '2026-10-15 14:32:10' },
-  { id: 'dem-2', year: '2026', district: '合肥市 肥西县', enterpriseName: '安徽省林业碳票运营管理有限公司', demandVolume: 8000, unitPrice: 50, tradedVolume: 2000, onboardingTime: '2026-10-14 11:20:05' },
-  { id: 'dem-3', year: '2025', district: '合肥市 庐阳区', enterpriseName: '合肥庐阳区林业生态发展投资有限公司', demandVolume: 1500, unitPrice: 53, tradedVolume: 500, onboardingTime: '2025-10-13 09:15:40' },
-  { id: 'dem-4', year: '2025', district: '合肥市 庐阳区', enterpriseName: '安徽森碳汇源生物科技有限公司', demandVolume: 5000, unitPrice: 49, tradedVolume: 1000, onboardingTime: '2025-09-12 16:45:20' },
-  { id: 'dem-5', year: '2024', district: '合肥市 肥东县', enterpriseName: '安徽肥东生态林业开发有限公司', demandVolume: 1200, unitPrice: 51, tradedVolume: 1200, onboardingTime: '2024-10-11 10:22:15' },
-  { id: 'dem-6', year: '2024', district: '合肥市 肥东县', enterpriseName: '安徽皖中绿色碳汇资产管理中心', demandVolume: 2500, unitPrice: 48, tradedVolume: 2000, onboardingTime: '2024-08-10 14:10:00' },
-  { id: 'dem-7', year: '2023', district: '合肥市 高新区', enterpriseName: '合肥高新低碳技术研究院有限公司', demandVolume: 1000, unitPrice: 55, tradedVolume: 1000, onboardingTime: '2023-11-09 09:30:45' },
-  { id: 'dem-8', year: '2023', district: '合肥市 高新区', enterpriseName: '安徽碳中和数字科技有限责任公司', demandVolume: 3500, unitPrice: 52, tradedVolume: 1000, onboardingTime: '2023-10-08 15:50:30' },
-  { id: 'dem-9', year: '2023', district: '合肥市 蜀山区', enterpriseName: '合肥蜀山绿林碳汇开发有限公司', demandVolume: 2000, unitPrice: 50, tradedVolume: 500, onboardingTime: '2023-07-07 10:05:12' },
-  { id: 'dem-10', year: '2023', district: '合肥市 滨湖新区', enterpriseName: '安徽滨湖生态湿地碳汇投资有限公司', demandVolume: 6000, unitPrice: 51, tradedVolume: 3000, onboardingTime: '2023-05-06 08:50:00' },
-];
-
-const INITIAL_TRADING_RECORDS: TradingRecord[] = [
-  { id: 'tr-1', year: '2026', supplyDistrict: '合肥市 肥西县', supplyEnterpriseName: '安徽合肥绿碳生态科技有限责任公司', demandDistrict: '合肥市 肥东县', demandEnterpriseName: '安徽省林业碳票运营管理有限公司', tradingVolume: 1500, unitPrice: 52, tradingTime: '2026-10-18 16:45:20' },
-  { id: 'tr-2', year: '2026', supplyDistrict: '合肥市 庐阳区', supplyEnterpriseName: '合肥庐阳区林业生态发展投资有限公司', demandDistrict: '合肥市 高新区', demandEnterpriseName: '安徽高新低碳技术研究院有限公司', tradingVolume: 2200, unitPrice: 54, tradingTime: '2026-10-17 14:30:10' },
-  { id: 'tr-3', year: '2026', supplyDistrict: '合肥市 肥东县', supplyEnterpriseName: '安徽肥东生态林业开发有限公司', demandDistrict: '合肥市 蜀山区', demandEnterpriseName: '安徽蜀山绿林碳汇开发有限公司', tradingVolume: 3000, unitPrice: 51, tradingTime: '2026-10-16 11:20:05' },
-  { id: 'tr-4', year: '2026', supplyDistrict: '合肥市 高新区', supplyEnterpriseName: '安徽皖投碳中和数字科技有限责任公司', demandDistrict: '合肥市 滨湖新区', demandEnterpriseName: '安徽滨湖生态湿地碳汇投资有限公司', tradingVolume: 5000, unitPrice: 53, tradingTime: '2026-10-15 09:15:40' },
-  { id: 'tr-5', year: '2026', supplyDistrict: '合肥市 蜀山区', supplyEnterpriseName: '安徽蜀山绿林碳汇开发有限公司', demandDistrict: '合肥市 肥西县', demandEnterpriseName: '安徽合肥绿碳生态科技有限责任公司', tradingVolume: 1200, unitPrice: 49, tradingTime: '2026-10-14 15:10:00' },
-  { id: 'tr-6', year: '2026', supplyDistrict: '合肥市 滨湖新区', supplyEnterpriseName: '安徽滨湖生态湿地碳汇投资有限公司', demandDistrict: '合肥市 庐阳区', demandEnterpriseName: '安徽森碳汇源生物科技有限公司', tradingVolume: 4000, unitPrice: 55, tradingTime: '2026-10-12 10:22:15' },
-  { id: 'tr-7', year: '2026', supplyDistrict: '合肥市 肥西县', supplyEnterpriseName: '安徽省林业碳票运营管理有限公司', demandDistrict: '合肥市 肥东县', demandEnterpriseName: '安徽皖中绿色碳汇资产管理中心', tradingVolume: 2500, unitPrice: 50, tradingTime: '2026-10-10 14:10:00' },
-  { id: 'tr-8', year: '2026', supplyDistrict: '合肥市 庐阳区', supplyEnterpriseName: '安徽森碳汇源生物科技有限公司', demandDistrict: '合肥市 高新区', demandEnterpriseName: '安徽高新低碳技术研究院有限公司', tradingVolume: 1800, unitPrice: 48, tradingTime: '2026-10-08 09:30:45' },
-  { id: 'tr-9', year: '2026', supplyDistrict: '合肥市 肥东县', supplyEnterpriseName: '安徽皖中绿色碳汇资产管理中心', demandDistrict: '合肥市 蜀山区', demandEnterpriseName: '安徽合肥绿碳生态科技有限责任公司', tradingVolume: 3200, unitPrice: 52, tradingTime: '2026-10-05 15:50:30' },
-  { id: 'tr-10', year: '2026', supplyDistrict: '合肥市 高新区', supplyEnterpriseName: '安徽高新低碳技术研究院有限公司', demandDistrict: '合肥市 滨湖新区', demandEnterpriseName: '安徽省林业碳票运营管理有限公司', tradingVolume: 6000, unitPrice: 56, tradingTime: '2026-10-01 08:50:00' },
-];
 
 interface TradingSystemViewProps {
   username?: string;
@@ -591,6 +520,12 @@ export const TradingSystemView: React.FC<TradingSystemViewProps> = ({
     return filteredDemandRecords.slice(start, start + demandPageSize);
   }, [filteredDemandRecords, demandPage, demandPageSize]);
 
+  // 四页签统计摘要：均由当前记录数据实时计算，新增/编辑/删除记录后自动更新
+  const tradingSummary = useMemo(() => calcTradingSummary(tradingRecords), [tradingRecords]);
+  const enterpriseSummary = useMemo(() => calcEnterpriseSummary(records), [records]);
+  const supplySummary = useMemo(() => calcSupplySummary(supplyRecords), [supplyRecords]);
+  const demandSummary = useMemo(() => calcDemandSummary(demandRecords), [demandRecords]);
+
   return (
     <div className="min-h-screen bg-[#040e09] text-slate-100 flex flex-col font-sans select-none relative overflow-x-hidden">
       {/* Dynamic Background Cyber Mesh */}
@@ -723,6 +658,13 @@ export const TradingSystemView: React.FC<TradingSystemViewProps> = ({
         {/* TAB 1: 交易记录 */}
         {activeTab === 'records' && (
           <>
+            {/* 统计摘要：由交易记录实时计算 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <SummaryStat label="交易笔数" value={String(tradingSummary.tradeCount)} unit="笔" />
+              <SummaryStat label="累计交易量" value={tradingSummary.totalVolume.toLocaleString()} unit="吨" />
+              <SummaryStat label="累计交易额" value={tradingSummary.totalAmount.toLocaleString()} unit="元" />
+              <SummaryStat label="加权平均单价" value={tradingSummary.weightedAvgPrice.toFixed(1)} unit="元/吨" />
+            </div>
             {/* CARD 1: 筛选搜索 */}
             <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1065,7 +1007,13 @@ export const TradingSystemView: React.FC<TradingSystemViewProps> = ({
         {/* TAB 2: 企业入驻 */}
         {activeTab === 'enterprise' && (
           <>
-            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
+            {/* 统计摘要：由入驻企业记录实时计算 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <SummaryStat label="入驻企业数" value={String(enterpriseSummary.enterpriseCount)} unit="家" />
+              <SummaryStat label="出让企业" value={String(enterpriseSummary.sellerCount)} unit="家" />
+              <SummaryStat label="受让企业" value={String(enterpriseSummary.buyerCount)} unit="家" />
+              <SummaryStat label="可交易总量" value={enterpriseSummary.totalTradableVolume.toLocaleString()} unit="吨" />
+            </div>            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-emerald-400" />
@@ -1298,7 +1246,13 @@ export const TradingSystemView: React.FC<TradingSystemViewProps> = ({
         {/* TAB 3: 供应信息 */}
         {activeTab === 'supply' && (
           <>
-            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
+            {/* 统计摘要：由供应挂牌记录实时计算 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <SummaryStat label="挂牌笔数" value={String(supplySummary.supplyCount)} unit="笔" />
+              <SummaryStat label="供应总量" value={supplySummary.totalSupplyVolume.toLocaleString()} unit="吨" />
+              <SummaryStat label="已成交量" value={supplySummary.totalTradedVolume.toLocaleString()} unit="吨" />
+              <SummaryStat label="成交率" value={supplySummary.tradeRate.toFixed(1)} unit="%" />
+            </div>            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-emerald-400" />
@@ -1525,7 +1479,13 @@ export const TradingSystemView: React.FC<TradingSystemViewProps> = ({
         {/* TAB 4: 需求信息 */}
         {activeTab === 'demand' && (
           <>
-            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
+            {/* 统计摘要：由需求意向记录实时计算 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <SummaryStat label="意向笔数" value={String(demandSummary.demandCount)} unit="笔" />
+              <SummaryStat label="需求总量" value={demandSummary.totalDemandVolume.toLocaleString()} unit="吨" />
+              <SummaryStat label="已成交量" value={demandSummary.totalTradedVolume.toLocaleString()} unit="吨" />
+              <SummaryStat label="成交率" value={demandSummary.tradeRate.toFixed(1)} unit="%" />
+            </div>            <div className="p-4 bg-slate-950/80 border border-emerald-900/60 rounded-2xl shadow-xl backdrop-blur-md space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-emerald-400" />
